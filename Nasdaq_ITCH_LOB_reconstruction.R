@@ -22,10 +22,6 @@ library(doParallel)
 rm(list=ls())
 
 
-
-
-
-
 ### Note that for some stocks, the trading symbol and the ticker are not the same
 ### According the CRSP, 
 ### "Trading Ticker Symbol is the trading symbol listed by exchanges and consolidated quote systems. 
@@ -33,13 +29,6 @@ rm(list=ls())
 ### There is no punctuation (no periods) in the Trading Ticker Symbol. 
 ### NASDAQ symbol needs the punctuation.
 
-load("C:/Users/ruchuan2/Box/odd_lot_quote_project/NASDAQ ITCH/filtered_sample.rda")
-
-# stock.list <- sample[DATE==dates[i], unique(SYM_ROOT)]
-# 
-# sample[, nasdaq.sym:=fifelse(TSYMBOL==TICKER, TSYMBOL, paste0(TICKER, ".", substr(TSYMBOL, nchar(TSYMBOL), nchar(TSYMBOL))))]
-# 
-# save(sample, file = "C:/Users/ruchuan2/Box/odd_lot_quote_project/NASDAQ ITCH/filtered_sample.rda")
 
 
 #----------------------Parse the NASDAQ binary itch file------------------------------------------
@@ -49,9 +38,9 @@ rm(sample)
 gc()
 
 
-all <- read_itch("C:/Users/ruchuan2/Box/odd_lot_quote_project/NASDAQ ITCH/10302019.NASDAQ_ITCH50.gz", 
+all <- read_itch("10302019.NASDAQ_ITCH50.gz", 
                        c("system_events", "stock_directory","trading_status", "orders", "market_participant_states", "modifications", "trades"),
-                       quiet = TRUE)
+                       quiet = TRUE)  #### test file
 
 
 
@@ -74,13 +63,13 @@ stock.directory <- all[["trading_status"]][stock_locate %in% stock.directory & "
 # 
 market.participants <- all[["market_participant_states"]][stock_locate %in% stock.directory]
 
-save(market.participants, file=paste0('/projects/aces/ruchuan2/itch_book/market_participants/', date, ".rda"))
+save(market.participants, file=paste0('path', date, ".rda"))
 rm(market.participants)
 
 gc()
 
 trades <- all[["trades"]][stock_locate %in% stock.directory & datetime %between% c(market.open, market.close)]
-save(trades, file=paste0('/projects/aces/ruchuan2/itch_book/trades/',date,".rda"))
+save(trades, file=paste0('path',date,".rda"))
 rm(trades)
 gc()
 
@@ -119,16 +108,14 @@ gc()
 
 gc()
 
-
 messages[, `:=`(order_ref=as.numeric(order_ref), new_order_ref=as.numeric(new_order_ref))]
 stock.directory <- messages[, unique(stock_locate)]
-registerDoParallel(cl <- makeCluster(3))
 
 message.list <-list()
 
-##for(j in 1:length(stock.directory)){
+for(j in 1:length(stock.directory)){
 
-test <- foreach(j=1:2, .packages = c("data.table", "nanotime") ) %dopar% {
+
   message <- messages[stock_locate==stock.directory[j]]
 
  ## print(stock.directory[j])
@@ -227,10 +214,6 @@ executions2[is.na(last.update.price), `:=`(last.update.price=price.y)]
 executions2[is.na(last.update.shares), `:=`(last.update.shares=shares.y)]
 executions2 <- executions2[, -c("buy.y", "price.y", "shares.y")]
 setnames(executions2, c("buy.x","shares.x", "price.x"), c("buy","shares", "price"))
-
-
-
-
 
 
 # executions2.1 <- executions2[,.SD[.N>1], by=.(order_ref)][, `:=`(last.update.shares=0,last.update.price=0)][]
@@ -1328,5 +1311,5 @@ message <- cbind(message, book[, .(Bid_PX_1, Ask_PX_1)])
 }
 
 messages <- rbindlist(message.list)
-save(messages, file=paste0('/projects/aces/ruchuan2/itch_book/messages/', date, '.rda'))
+save(messages, file=paste0('path', date, '.rda'))
 
